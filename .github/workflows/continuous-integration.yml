@@ -1,12 +1,10 @@
-name: Release
-on:
-  push:
-    branches:
-      - master
+name: CI/CD
+on: push
 jobs:
-  release:
-    name: Release
+  deploy:
+    name: Deploy on npm
     runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/master' # Deploy only on the master branch
     steps:
       - name: Checkout
         uses: actions/checkout@v2
