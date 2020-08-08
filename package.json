@@ -1,0 +1,38 @@
+{
+  "name": "@solideal/storage",
+  "version": "0.0.0",
+  "description": "Making access to Solid pods data a breeze!",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solideal/storage.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "solid",
+    "ldp",
+    "pod"
+  ],
+  "author": "Julien LEICHER",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/solideal/storage/issues"
+  },
+  "homepage": "https://github.com/solideal/storage#readme",
+  "devDependencies": {
+    "typescript": "^3.9.7",
+    "ts-node": "8.10.2",
+    "semantic-release": "17.1.1"
+  },
+  "dependencies": {
+    "@inrupt/solid-client": "0.1.0"
+  }
+}
