@@ -1,130 +1,238 @@
 import {
+  getThingAll,
   SolidDataset,
   getSolidDataset,
-  getThingAll,
-  Thing,
-  asUrl,
-  ThingPersisted,
+  WithResourceInfo,
   getThing,
-  createThing,
-  saveSolidDatasetAt,
-  setThing,
   removeThing,
+  saveSolidDatasetAt,
+  createThing,
+  setThing,
+  asUrl,
+  ThingLocal,
 } from "@inrupt/solid-client";
-import { Schema, is } from "./schema";
+import { Schema, Definition } from "./schema";
+import { Maybe } from "./types";
+import {
+  fetcher,
+  CreateOptions,
+  resolveTypeLocation,
+  resolveOrRegisterTypeLocation,
+} from "./resolver";
 
+/**
+ * Configuration options for a Repository.
+ */
 export interface Options<TData> {
   /**
-   * Source IRI of the document containing data. If not provided, it will try to find
-   * one by looking at the public and private type index of the user represented
-   * by the webid.
-   *
-   * If no document exists for this resource type, it will raise an Error.
+   * URL of the document where you want your data to be stored and retrieved.
    */
-  source?: string;
+  source: string;
 
   /**
-   * WebID of a user. This is used when you don't know where a document containing
-   * the kind of data you want to persist and want to rely on the Solid type index.
-   *
-   * If the webid is not provided, it will try to determine it using the solid-auth
-   * library.
+   * Optional fetch function to use to make authenticated request to user resources.
+   * If you use the same in every repository, you may provide with the `configure({ fetch: ... })`
+   * instead. This one will take precedence over the global one if defined.
    */
-  webid?: string;
+  fetch?: unknown;
 
   /**
    * Type of data managed by a repository. You must provide an URI representing the
-   * resource type (this is the rdf:type value).
+   * resource type (which is the rdf:type value).
+   *
+   * This property is optional if you already provide a `Schema` instance.
    */
-  type: string;
+  type?: string;
 
   /**
    * Schema used to map between linked data and Javascript so you don't have to
-   * manually updated subjects, predicates and objects.
+   * manually updated subjects, predicates and objects. You can provide an already
+   * instantiated Schema or only the definition and the repository will take care of
+   * the schema creation.
    */
-  schema: Schema<TData>;
+  schema: Definition<TData> | Schema<TData>;
 }
 
 /**
- * Include the $uri property representing the primary key of a resource.
+ * Specific error when no type has been defined but is mandatory to instantiate a
+ * proper `Schema` object.
  */
-export interface WithURI {
-  $uri: string;
+export class NoTypeDefined extends Error {
+  constructor() {
+    super(
+      "when giving a schema definition, you must also provide the type of data you wish to persist"
+    );
+  }
 }
-
-const a = is.url("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 
 /**
  * Provides access to a Solid POD and defines a schema (in term of Linked Data)
  * use to map back and forth so you don't have to do it manually.
  *
+ * This is the primary (if not the only) component you may need when building an
+ * app on top of a Solid pod. It makes it convenient and easy to read and write
+ * data.
+ *
  * With this tiny class, you can easily build your app without much knowledge of
- * how Linked Data and Solid works.
+ * how Linked Data and Solid works..
  */
 export class Repository<TData> {
-  constructor(private readonly options: Options<TData>) {}
+  private options!: Options<TData>;
+  private schema!: Schema<TData>;
 
-  async save(data: TData): Promise<TData & WithURI> {
-    const { dataset, source } = await this.fetchDataset();
-    const uri: string = (<any>data).$uri;
-    let thing = a.write(
-      uri ? getThing(dataset, uri) : createThing(),
-      this.options.type
-    );
-
-    for (const name in this.options.schema) {
-      thing = this.options.schema[name].write(thing, data[name]);
-    }
-
-    const newDataset = setThing(dataset, thing);
-    await saveSolidDatasetAt(source, newDataset);
-
-    return { ...data, $uri: asUrl(<any>thing, source) };
-  }
-
-  async remove(data: TData & WithURI): Promise<void> {
-    const { dataset, source } = await this.fetchDataset();
-    const newDataset = removeThing(dataset, data.$uri);
-    await saveSolidDatasetAt(source, newDataset);
-  }
-
-  async find(): Promise<(TData & WithURI)[]> {
-    const { dataset } = await this.fetchDataset();
-
-    return getThingAll(dataset)
-      .filter((thing) => a.read(thing) === this.options.type)
-      .map(this.convert.bind(this));
+  constructor(options: Options<TData>) {
+    this.use(options);
   }
 
   /**
-   * Try to fetch a dataset to store actual data.
-   *
-   * It returns a composite object with the dataset and the source URI because the
-   * source is needed to store the dataset back.
+   * Updates the repository inner options. It lets you override any options you have
+   * defined previously. You'll probably just needs to update the source stuff through...
    */
-  private async fetchDataset(): Promise<{
-    dataset: SolidDataset;
-    source: string;
-  }> {
-    // TODO: use a cached one if available?
+  use(options: Partial<Options<TData>>): void {
+    this.options = {
+      ...this.options,
+      ...options,
+    };
 
-    if (this.options.source) {
-      return {
-        dataset: await getSolidDataset(this.options.source),
-        source: this.options.source,
-      };
+    // (Re)build the schema instance if needed
+    if (this.options.schema instanceof Schema) {
+      this.schema = this.options.schema;
+    } else {
+      if (!this.options.type) {
+        throw new NoTypeDefined();
+      }
+      this.schema = new Schema(this.options.type, this.options.schema);
     }
-
-    throw new Error("not found");
   }
 
-  private convert(thing: Thing): TData & WithURI {
-    const data: any = { $uri: asUrl(<ThingPersisted>thing) };
+  /**
+   * Add or update given data. If a data does not have its key (defined by the schema
+   * is.key()) defined, the repository will consider it's a new data it needs to
+   * persist and it will update its key once saved.
+   */
+  async save(...data: TData[]): Promise<void> {
+    const dataset = data.reduce((ds, record) => {
+      const dataUrl = this.schema.getUrl(record);
+      const thing = this.schema.write(
+        dataUrl ? getThing(ds, dataUrl) : createThing(), // Should we check the thing type retrieved with getThing here?
+        record
+      );
+      this.schema.setUrl(
+        record,
+        asUrl(<ThingLocal>thing, ds.internal_resourceInfo.sourceIri)
+      );
+      return setThing(ds, thing);
+    }, await this.getDataset());
+    await this.saveDataset(dataset);
+  }
 
-    for (const name in this.options.schema) {
-      data[name] = this.options.schema[name].read(thing);
+  /**
+   * Remove one or many data from this repository. You can provide data primary key or
+   * the whole object.
+   */
+  async remove(...data: (Readonly<TData> | string)[]): Promise<void> {
+    const dataset = data.reduce(
+      (ds, record) => removeThing(ds, this.schema.getUrl(record)),
+      await this.getDataset()
+    );
+    await this.saveDataset(dataset);
+  }
+
+  /**
+   * Retrieve a single element from this repository. You can either provide the
+   * unique identifier of a resource or a filter function to apply.
+   */
+  async only(
+    filter: string | ((data: Readonly<TData>) => boolean)
+  ): Promise<Maybe<TData>> {
+    const dataset = await this.getDataset();
+
+    if (typeof filter === "string") {
+      const thing = getThing(dataset, this.schema.getUrl(filter));
+
+      if (!this.schema.ofType(thing)) {
+        return null;
+      }
+      return this.schema.read(thing);
     }
 
-    return <TData & WithURI>data;
+    const found = await this.find(filter);
+    return found.length > 0 ? found[0] : null;
+  }
+
+  /**
+   * Find all data in the repository. If you only need one data, you can use the `first`
+   * method instead.
+   */
+  async find(filter?: (data: Readonly<TData>) => boolean): Promise<TData[]> {
+    const dataset = await this.getDataset();
+    const results = getThingAll(dataset)
+      .filter(this.schema.ofType.bind(this.schema))
+      .map(this.schema.read.bind(this.schema));
+
+    return filter ? results.filter(filter) : results;
+  }
+
+  /**
+   * Shortcut to instantiate a repository by resolving the location of a dataset
+   * using Solid types index or registering it if needed using the two helper
+   * methods: `resolveTypeLocation` and `resolveOrRegisterTypeLocation` depending
+   * on the given parameters.
+   */
+  static async resolve<TData>(
+    options: Omit<Options<TData>, "source">,
+    resolveOptions?: Partial<CreateOptions> & {
+      webid?: string;
+      fetch?: unknown;
+    }
+  ): Promise<Repository<TData>> {
+    const repo = new Repository({
+      ...options,
+      source: "", // Will be resolved later...
+    });
+
+    repo.options.source = resolveOptions?.path
+      ? await resolveOrRegisterTypeLocation(
+          repo.schema.type,
+          {
+            path: resolveOptions.path,
+            index: resolveOptions.index ?? "public",
+          },
+          resolveOptions.webid,
+          resolveOptions.fetch
+        )
+      : await resolveTypeLocation(
+          repo.schema.type,
+          resolveOptions?.webid,
+          resolveOptions?.fetch
+        );
+
+    return repo;
+  }
+
+  /**
+   * Get the solid dataset using the source option.
+   *
+   * Note that for this first version, it does not support resources in multiple
+   * documents (wiht containers) but it's already planned :)
+   */
+  private async getDataset(): Promise<SolidDataset & WithResourceInfo> {
+    return await getSolidDataset(
+      this.options.source,
+      fetcher(this.options.fetch)
+    );
+  }
+
+  /**
+   * Save a dataset and make sure it uses the fetch options of this repository.
+   */
+  private async saveDataset(
+    dataset: SolidDataset & WithResourceInfo
+  ): Promise<void> {
+    await saveSolidDatasetAt(
+      dataset.internal_resourceInfo.sourceIri,
+      dataset,
+      fetcher(this.options.fetch)
+    );
   }
 }
