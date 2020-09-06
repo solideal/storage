@@ -48,15 +48,17 @@ export interface Builder<TPrimitive> {
 /**
  * Hold together field definitions for a particular data type.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Definition<TData> = { [key in keyof Partial<TData>]: Builder<any> };
+export type Definition<TData> = {
+  [key in keyof Partial<TData>]: Builder<TData[key]>;
+};
 
 /**
  * Same as Definition<TData> except that the definition is now built. Use by the
  * schema to effectively read/write stuff.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Fields<TData> = { [key in keyof Partial<TData>]: Field<any> };
+export type Fields<TData> = {
+  [key in keyof Partial<TData>]: Field<TData[key]>;
+};
 
 /**
  * Error raised when no KeyField has been found in a definition.
@@ -205,7 +207,8 @@ export class Schema<TData> {
   read(thing: Thing): TData {
     const data = {} as TData;
     for (const field in this.fields) {
-      data[field] = this.fields[field].read(thing);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      data[field] = this.fields[field].read(thing)!;
     }
     return data;
   }
