@@ -46,7 +46,7 @@ describe("the `KeyBuilder` class", () => {
   });
 
   it("can construct a KeyField with custom converter", () => {
-    const deserialize = (url: string) => url;
+    const deserialize = (sourceUrl: string) => sourceUrl;
     const serialize = (value: string) => value;
     expect(new KeyBuilder().converter(serialize, deserialize).build()).toEqual(
       new KeyField({ deserialize, serialize })
