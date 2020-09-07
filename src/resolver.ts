@@ -161,7 +161,7 @@ export async function resolveOrRegisterTypeLocation(
 async function findFirstAvailableTypeLocation(
   type: string,
   urls: (string | null)[],
-  fetcher?: Fetcher
+  options?: Fetcher
 ): Promise<Maybe<string>> {
   for (const url of urls) {
     if (!url) {
@@ -169,14 +169,14 @@ async function findFirstAvailableTypeLocation(
     }
 
     try {
-      const registrations = getThingAll(await getSolidDataset(url, fetcher))
+      const registrations = getThingAll(await getSolidDataset(url, options))
         .filter((t) => typeRegistrationSchema.ofType(t))
         .map((t) => typeRegistrationSchema.read(t))
         .filter((t) => t.forClass === type);
 
       for (const availableLocation of registrations) {
         try {
-          await getSolidDataset(availableLocation.instance, fetcher);
+          await getSolidDataset(availableLocation.instance, options);
           return availableLocation.instance;
         } catch {
           // Failure is expected here, that means we do not have access rights
