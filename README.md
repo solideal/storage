@@ -1,4 +1,4 @@
-# @solideal/storage
+# @solideal/storage [![npm version](https://badgen.net/npm/v/@solideal/storage)](https://www.npmjs.com/package/@solideal/storage) [![package size](https://badgen.net/bundlephobia/minzip/@solideal/storage)](https://bundlephobia.com/result?p=@solideal/storage@1.1.0) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=solideal_storage&metric=coverage)](https://sonarcloud.io/dashboard?id=solideal_storage)
 
 Making access to Solid Pod's data a breeze! (or at least, trying to 😁)
 
