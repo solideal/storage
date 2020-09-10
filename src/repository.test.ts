@@ -126,6 +126,28 @@ describe("the `Repository` class", () => {
     ).toEqual([bookmark2]);
   });
 
+  it("can returns all data matching given keys", async () => {
+    jest.spyOn(solid, "getSolidDataset").mockResolvedValue(sampleDataset);
+
+    const repo = new Repository<Bookmark>({
+      source: sampleDataset.internal_resourceInfo.sourceIri,
+      type: bookmarkTypePredicate,
+      schema: {
+        id: is.key().base64(),
+        title: is.string(titlePredicate),
+        url: is.url(urlPredicate),
+      },
+    });
+
+    expect(
+      await repo.find([
+        bookmark1.id,
+        "aHR0cDovL2Jvb2ttYXJrLnR0bCM0",
+        bookmark2.id,
+      ])
+    ).toEqual([bookmark1, bookmark2]);
+  });
+
   it("can return a data by its key", async () => {
     jest.spyOn(solid, "getSolidDataset").mockResolvedValue(sampleDataset);
 
