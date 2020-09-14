@@ -12,9 +12,22 @@ import {
   setDecimal,
   getInteger,
   setInteger,
+  getStringNoLocaleAll,
+  addStringNoLocale,
+  addBoolean,
+  getBooleanAll,
+  getUrlAll,
+  addUrl,
+  getDatetimeAll,
+  addDatetime,
+  getDecimalAll,
+  addDecimal,
+  getIntegerAll,
+  addInteger,
 } from "@inrupt/solid-client";
 import { KeyField, KeyBuilder } from "./keyField";
 import { PrimitiveBuilder } from "./primitiveField";
+import { ArrayBuilder } from "./arrayField";
 import { Maybe } from "../types";
 import { rdf } from "../namespaces";
 
@@ -75,8 +88,6 @@ export class NoKeyDefined extends Error {
  * The `is` object enables you to define a schema using predicates for a javascript
  * object type. It makes really convenient to build a schema definition with an easy
  * to read fluent API.
- *
- * TODO: Manage array of those primitives and nested properties in the long run...
  */
 export const is = {
   key: (): KeyBuilder => new KeyBuilder(),
@@ -86,10 +97,22 @@ export const is = {
       setter: setStringNoLocale,
       predicates,
     }),
+  strings: (...predicates: string[]): ArrayBuilder<string> =>
+    new ArrayBuilder({
+      getter: getStringNoLocaleAll,
+      setter: addStringNoLocale,
+      predicates,
+    }),
   boolean: (...predicates: string[]): PrimitiveBuilder<boolean> =>
     new PrimitiveBuilder({
       getter: getBoolean,
       setter: setBoolean,
+      predicates,
+    }),
+  booleans: (...predicates: string[]): ArrayBuilder<boolean> =>
+    new ArrayBuilder({
+      getter: getBooleanAll,
+      setter: addBoolean,
       predicates,
     }),
   url: (...predicates: string[]): PrimitiveBuilder<string> =>
@@ -98,10 +121,22 @@ export const is = {
       setter: setUrl,
       predicates,
     }),
+  urls: (...predicates: string[]): ArrayBuilder<string> =>
+    new ArrayBuilder({
+      getter: getUrlAll,
+      setter: addUrl,
+      predicates,
+    }),
   datetime: (...predicates: string[]): PrimitiveBuilder<Date> =>
     new PrimitiveBuilder({
       getter: getDatetime,
       setter: setDatetime,
+      predicates,
+    }),
+  datetimes: (...predicates: string[]): ArrayBuilder<Date> =>
+    new ArrayBuilder({
+      getter: getDatetimeAll,
+      setter: addDatetime,
       predicates,
     }),
   decimal: (...predicates: string[]): PrimitiveBuilder<number> =>
@@ -110,10 +145,22 @@ export const is = {
       setter: setDecimal,
       predicates,
     }),
+  decimals: (...predicates: string[]): ArrayBuilder<number> =>
+    new ArrayBuilder({
+      getter: getDecimalAll,
+      setter: addDecimal,
+      predicates,
+    }),
   integer: (...predicates: string[]): PrimitiveBuilder<number> =>
     new PrimitiveBuilder({
       getter: getInteger,
       setter: setInteger,
+      predicates,
+    }),
+  integers: (...predicates: string[]): ArrayBuilder<number> =>
+    new ArrayBuilder({
+      getter: getIntegerAll,
+      setter: addInteger,
       predicates,
     }),
 } as const;
