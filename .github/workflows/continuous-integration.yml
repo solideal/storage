@@ -33,7 +33,7 @@ jobs:
     name: Send Sonarcloud analysis
     runs-on: ubuntu-20.04
     needs: [test]
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' # requires Sonar only on pull request since every new code goes through it
     steps:
       - uses: actions/checkout@v2
         with:
@@ -45,7 +45,7 @@ jobs:
   deploy:
     name: Deploy on npm
     runs-on: ubuntu-20.04
-    needs: [sonar, test]
+    needs: test
     if: github.ref == 'refs/heads/master' && github.event_name == 'push' # Deploy only on the master branch and push event
     steps:
       - name: Checkout
