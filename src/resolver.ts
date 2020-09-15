@@ -8,11 +8,15 @@ import {
   createThing,
   setThing,
 } from "@inrupt/solid-client";
-import { Fetcher } from "./types";
+import { Fetcher, Maybe } from "./types";
 import { setting } from "./config";
 import { solid } from "./namespaces";
 import { Schema, is } from "./schema";
 
+/**
+ * Error thrown when no webid has been provided to a resolver so it can't
+ * determine where to look at first.
+ */
 export class NoWebIdDefined extends Error {
   constructor() {
     super(
@@ -21,6 +25,9 @@ export class NoWebIdDefined extends Error {
   }
 }
 
+/**
+ * Thrown when no location has been found for a particular type.
+ */
 export class NoLocationFound extends Error {
   constructor(type: string) {
     super(
@@ -29,6 +36,9 @@ export class NoLocationFound extends Error {
   }
 }
 
+/**
+ * Thrown if a webid has no type indexes defined. That should never happen...
+ */
 export class NoIndexLocationFound extends Error {
   constructor() {
     super("could not find the type index location");
@@ -67,7 +77,7 @@ export async function resolveTypeLocation(
   }
 
   const profile = getThing(await getSolidDataset(wid, options), wid);
-  const locations = await findAvailableTypeLocationsInDatasets(
+  const location = await findFirstAvailableTypeLocation(
     type,
     [
       getUrl(profile, solid.publicTypeIndex),
@@ -76,11 +86,11 @@ export async function resolveTypeLocation(
     options
   );
 
-  if (locations.length === 0) {
+  if (!location) {
     throw new NoLocationFound(type);
   }
 
-  return locations[0];
+  return location;
 }
 
 export interface CreateOptions {
@@ -148,28 +158,26 @@ export async function resolveOrRegisterTypeLocation(
 /**
  * Try to find available type locations by looking at solid type indexes.
  */
-async function findAvailableTypeLocationsInDatasets(
+async function findFirstAvailableTypeLocation(
   type: string,
   urls: (string | null)[],
-  fetcher?: Fetcher
-): Promise<string[]> {
-  const locations: string[] = [];
-
+  options?: Fetcher
+): Promise<Maybe<string>> {
   for (const url of urls) {
     if (!url) {
       continue;
     }
 
     try {
-      const registrations = getThingAll(await getSolidDataset(url, fetcher))
+      const registrations = getThingAll(await getSolidDataset(url, options))
         .filter((t) => typeRegistrationSchema.ofType(t))
         .map((t) => typeRegistrationSchema.read(t))
         .filter((t) => t.forClass === type);
 
       for (const availableLocation of registrations) {
         try {
-          await getSolidDataset(availableLocation.instance, fetcher);
-          locations.push(availableLocation.instance);
+          await getSolidDataset(availableLocation.instance, options);
+          return availableLocation.instance;
         } catch {
           // Failure is expected here, that means we do not have access rights
           // to access the resource
@@ -179,7 +187,8 @@ async function findAvailableTypeLocationsInDatasets(
       // Failure expected when the type index is not accessible
     }
   }
-  return locations;
+
+  return null;
 }
 
 /**

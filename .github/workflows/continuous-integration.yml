@@ -1,8 +1,8 @@
 name: CI/CD
-on: push
+on: [push, pull_request]
 jobs:
   test:
-    name: Lint & Test
+    name: Quality checks
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -29,11 +29,24 @@ jobs:
         run: npm run lint
       - name: Test
         run: npm test
+  sonar:
+    name: Send Sonarcloud analysis
+    runs-on: ubuntu-20.04
+    needs: [test]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   deploy:
     name: Deploy on npm
     runs-on: ubuntu-20.04
-    needs: test
-    if: github.ref == 'refs/heads/master' # Deploy only on the master branch
+    needs: [sonar, test]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' # Deploy only on the master branch and push event
     steps:
       - name: Checkout
         uses: actions/checkout@v2

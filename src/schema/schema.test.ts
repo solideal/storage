@@ -9,6 +9,12 @@ const predicate3 = "http://predicate.three";
 const predicate4 = "http://predicate.four";
 const predicate5 = "http://predicate.five";
 const predicate6 = "http://predicate.six";
+const predicate7 = "http://predicate.seven";
+const predicate8 = "http://predicate.eight";
+const predicate9 = "http://predicate.nine";
+const predicate10 = "http://predicate.ten";
+const predicate11 = "http://predicate.eleven";
+const predicate12 = "http://predicate.twelve";
 
 describe("the `Schema` class", () => {
   it("needs a KeyField definition", () => {
@@ -75,6 +81,15 @@ describe("the `Schema` class", () => {
       anInteger: 42,
       aDecimal: 133.7,
       aDate: new Date("2020-05-04T13:37:42.000Z"),
+      someStrings: ["one", "two"],
+      someBooleans: [true, false],
+      someUrls: ["https://some.website1.url", "https://some.website2.url"],
+      someIntegers: [1, 2],
+      someDecimals: [1.2, 3.4],
+      someDates: [
+        new Date("2020-06-04T13:37:42.000Z"),
+        new Date("2020-07-04T13:37:42.000Z"),
+      ],
     };
     const schema = new Schema<typeof data>(predicate1, {
       id: is.key().base64(),
@@ -84,6 +99,12 @@ describe("the `Schema` class", () => {
       anInteger: is.integer(predicate4),
       aDecimal: is.decimal(predicate5),
       aDate: is.datetime(predicate6),
+      someStrings: is.strings(predicate7),
+      someBooleans: is.booleans(predicate8),
+      someUrls: is.urls(predicate9),
+      someIntegers: is.integers(predicate10),
+      someDecimals: is.decimals(predicate11),
+      someDates: is.datetimes(predicate12),
     });
 
     const thing = schema.write(createThing({ url }), data);
@@ -97,7 +118,19 @@ describe("the `Schema` class", () => {
         [url, predicate3, data.anUrl],
         [url, predicate4, data.anInteger],
         [url, predicate5, data.aDecimal],
-        [url, predicate6, data.aDate]
+        [url, predicate6, data.aDate],
+        [url, predicate7, data.someStrings[0]],
+        [url, predicate7, data.someStrings[1]],
+        [url, predicate8, data.someBooleans[0]],
+        [url, predicate8, data.someBooleans[1]],
+        [url, predicate9, data.someUrls[0]],
+        [url, predicate9, data.someUrls[1]],
+        [url, predicate10, data.someIntegers[0]],
+        [url, predicate10, data.someIntegers[1]],
+        [url, predicate11, data.someDecimals[0]],
+        [url, predicate11, data.someDecimals[1]],
+        [url, predicate12, data.someDates[0]],
+        [url, predicate12, data.someDates[1]]
       )
     ).toEqual(true);
   });
@@ -111,6 +144,15 @@ describe("the `Schema` class", () => {
       anInteger: 42,
       aDecimal: 133.7,
       aDate: new Date("2020-05-04T13:37:42Z"),
+      someStrings: ["one", "two"],
+      someBooleans: [true, false],
+      someUrls: ["https://some.website1.url", "https://some.website2.url"],
+      someIntegers: [1, 2],
+      someDecimals: [1.2, 3.4],
+      someDates: [
+        new Date("2020-06-04T13:37:42.000Z"),
+        new Date("2020-07-04T13:37:42.000Z"),
+      ],
     };
     const schema = new Schema<typeof data>(predicate1, {
       id: is.key().base64(),
@@ -120,6 +162,12 @@ describe("the `Schema` class", () => {
       anInteger: is.integer(predicate4),
       aDecimal: is.decimal(predicate5),
       aDate: is.datetime(predicate6),
+      someStrings: is.strings(predicate7),
+      someBooleans: is.booleans(predicate8),
+      someUrls: is.urls(predicate9),
+      someIntegers: is.integers(predicate10),
+      someDecimals: is.decimals(predicate11),
+      someDates: is.datetimes(predicate12),
     });
     const thing = schema.write(createThing({ url }), data);
 

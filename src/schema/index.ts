@@ -13,3 +13,4 @@ export {
   PrimitiveBuilder,
   PrimitiveFieldOptions,
 } from "./primitiveField";
+export { ArrayField, ArrayBuilder, ArrayFieldOptions } from "./arrayField";

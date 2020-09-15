@@ -142,30 +142,47 @@ export class Repository<TData> {
    * Retrieve a single element from this repository. You can either provide the
    * unique identifier of a resource or a filter function to apply.
    */
+  async only(key: string): Promise<Maybe<TData>>;
+  async only(filter: (data: Readonly<TData>) => boolean): Promise<Maybe<TData>>;
   async only(
     filter: string | ((data: Readonly<TData>) => boolean)
   ): Promise<Maybe<TData>> {
-    const dataset = await this.getDataset();
+    let found: TData[];
 
+    // I could not inline that call because of tsc... ¯\_(ツ)_/¯
     if (typeof filter === "string") {
-      const thing = getThing(dataset, this.schema.getUrl(filter));
-
-      if (!this.schema.ofType(thing)) {
-        return null;
-      }
-      return this.schema.read(thing);
+      found = await this.find([filter]);
+    } else {
+      found = await this.find(filter);
     }
 
-    const found = await this.find(filter);
     return found.length > 0 ? found[0] : null;
   }
 
   /**
-   * Find all data in the repository. If you only need one data, you can use the `first`
+   * Find all data in the repository. If you only need one data, you can use the `only`
    * method instead.
    */
-  async find(filter?: (data: Readonly<TData>) => boolean): Promise<TData[]> {
+  async find(): Promise<TData[]>;
+  async find(filter: (data: Readonly<TData>) => boolean): Promise<TData[]>;
+  async find(keys: string[]): Promise<TData[]>;
+  async find(
+    filter?: string[] | ((data: Readonly<TData>) => boolean)
+  ): Promise<TData[]> {
     const dataset = await this.getDataset();
+
+    // For now, if a thing matching a key is not of the same type as the repository,
+    // it will be discarded.
+    if (Array.isArray(filter)) {
+      return filter.reduce((result, key) => {
+        const thing = getThing(dataset, this.schema.getUrl(key));
+        if (this.schema.ofType(thing)) {
+          result.push(this.schema.read(thing));
+        }
+        return result;
+      }, [] as TData[]);
+    }
+
     const results = getThingAll(dataset)
       .filter(this.schema.ofType.bind(this.schema))
       .map(this.schema.read.bind(this.schema));
