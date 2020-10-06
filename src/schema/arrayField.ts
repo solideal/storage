@@ -39,7 +39,7 @@ export class ArrayField<TPrimitive> implements Field<TPrimitive[]> {
     return this.options.predicates.reduce(
       (curThing, predicate) =>
         (valueToWrite ?? []).reduce(
-          (thing, value) => this.options.setter(thing, predicate, value),
+          (t, v) => this.options.setter(t, predicate, v),
           removeAll(curThing, predicate)
         ),
       thing
