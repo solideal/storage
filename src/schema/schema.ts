@@ -166,28 +166,40 @@ export const is = {
 } as const;
 
 /**
+ * Field used to read / write the rdf type of a Thing.
+ */
+const typeField = is.url(rdf.type).build();
+
+/**
+ * Sets the type of a Thing by settings the rdf:type property.
+ */
+export const setType = (thing: Thing, type: string): Thing =>
+  typeField.write(thing, type);
+
+/**
+ * Checks if a Thing is of the given type.
+ */
+export const ofType = (thing: Thing, type: string): boolean =>
+  typeField.read(thing) === type;
+
+/**
  * Schema of a TData used to map between triples and Javascript objects.
  * Given an object type (which should be an URL representing the kind of data
  * you want to persist) and a definition, it will provides methods to `write`
  * and `read` to/from a Thing.
  */
 export class Schema<TData> {
-  /**
-   * Contains the field use to write the rdf:type predicate.
-   */
-  private static readonly typeField = is.url(rdf.type).build();
-
   private readonly fields: Fields<TData>;
   private readonly key: { name: keyof TData; field: KeyField };
 
   /**
-   * Instantiates a new schema for a specific type (the kind of data you want to
-   * map) and an associated definition which maps object properties to rdf triples.
+   * Instantiates a new schema with a definition which maps object properties to
+   * rdf triples.
    *
    * This definition should at a bare minimum contains a KeyField definition to
    * hold a Thing url. It will throw a NoKeyDefined error if none was found.
    */
-  constructor(public readonly type: string, definition: Definition<TData>) {
+  constructor(definition: Definition<TData>) {
     const builtFields = {} as Fields<TData>;
     let key: keyof TData | undefined;
     for (const name in definition) {
@@ -205,13 +217,6 @@ export class Schema<TData> {
 
     this.key = { name: key, field: <KeyField>builtFields[key] };
     this.fields = builtFields;
-  }
-
-  /**
-   * Checks if the given Thing has a rdf:type corresponding to this schema.
-   */
-  ofType(thing: Thing): boolean {
-    return Schema.typeField.read(thing) === this.type;
   }
 
   /**
@@ -240,7 +245,6 @@ export class Schema<TData> {
    * The returned Thing contains quads edited by this operation.
    */
   write(thing: Thing, data: Readonly<TData>): Thing {
-    thing = Schema.typeField.write(thing, this.type);
     for (const field in this.fields) {
       thing = this.fields[field].write(thing, data[field]);
     }

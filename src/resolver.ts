@@ -10,8 +10,8 @@ import {
 } from "@inrupt/solid-client";
 import { Fetcher, Maybe } from "./types";
 import { setting } from "./config";
-import { solid } from "./namespaces";
-import { Schema, is } from "./schema";
+import { rdf, solid } from "./namespaces";
+import { Schema, is, ofType } from "./schema";
 
 /**
  * Error thrown when no webid has been provided to a resolver so it can't
@@ -50,10 +50,12 @@ export class NoIndexLocationFound extends Error {
  */
 const typeRegistrationSchema = new Schema<{
   url?: string;
+  type: string;
   forClass: string;
   instance: string;
-}>(solid.TypeRegistration, {
+}>({
   url: is.key(),
+  type: is.url(rdf.type),
   forClass: is.url(solid.forClass),
   instance: is.url(solid.instance),
 });
@@ -144,6 +146,7 @@ export async function resolveOrRegisterTypeLocation(
       setThing(
         await getSolidDataset(indexUrl, fetchOptions),
         typeRegistrationSchema.write(createThing(), {
+          type: solid.TypeRegistration,
           forClass: type,
           instance: dataset.internal_resourceInfo.sourceIri,
         })
@@ -170,7 +173,7 @@ async function findFirstAvailableTypeLocation(
 
     try {
       const registrations = getThingAll(await getSolidDataset(url, options))
-        .filter((t) => typeRegistrationSchema.ofType(t))
+        .filter((t) => ofType(t, solid.TypeRegistration))
         .map((t) => typeRegistrationSchema.read(t))
         .filter((t) => t.forClass === type);
 

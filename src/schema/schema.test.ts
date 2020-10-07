@@ -1,4 +1,4 @@
-import { createThing, setUrl } from "@inrupt/solid-client";
+import { createThing } from "@inrupt/solid-client";
 import { Schema, NoKeyDefined, is } from "./schema";
 import { hasExactly } from "../ldutils.test";
 
@@ -18,34 +18,18 @@ const predicate12 = "http://predicate.twelve";
 
 describe("the `Schema` class", () => {
   it("needs a KeyField definition", () => {
-    expect(() => new Schema(predicate1, {})).toThrowError(new NoKeyDefined());
-  });
-
-  it("provides a way to check if a Thing has the type of a schema", () => {
-    const schema = new Schema(predicate1, {
-      url: is.key(),
-    });
-    expect(schema.ofType(createThing({ url }))).toEqual(false);
-    expect(
-      schema.ofType(
-        setUrl(
-          createThing({ url }),
-          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          predicate1
-        )
-      )
-    ).toEqual(true);
+    expect(() => new Schema({})).toThrowError(new NoKeyDefined());
   });
 
   it("provides a way to convert a key to an url by using the KeyField", () => {
-    let schema = new Schema(predicate1, {
+    let schema = new Schema({
       url: is.key(),
     });
     expect(schema.getUrl("")).toEqual("");
     expect(schema.getUrl(url)).toEqual(url);
     expect(schema.getUrl({ url })).toEqual(url);
 
-    schema = new Schema(predicate1, {
+    schema = new Schema({
       url: is.key().base64(),
     });
 
@@ -55,7 +39,7 @@ describe("the `Schema` class", () => {
 
   it("provides a way to set a key to a data by using the KeyField", () => {
     const bookmark = { url: "" };
-    let schema = new Schema(predicate1, {
+    let schema = new Schema({
       url: is.key(),
     });
 
@@ -63,7 +47,7 @@ describe("the `Schema` class", () => {
 
     expect(bookmark.url).toEqual(url);
 
-    schema = new Schema(predicate1, {
+    schema = new Schema({
       url: is.key().base64(),
     });
 
@@ -91,7 +75,7 @@ describe("the `Schema` class", () => {
         new Date("2020-07-04T13:37:42.000Z"),
       ],
     };
-    const schema = new Schema<typeof data>(predicate1, {
+    const schema = new Schema<typeof data>({
       id: is.key().base64(),
       aString: is.string(predicate1),
       aBoolean: is.boolean(predicate2),
@@ -112,7 +96,6 @@ describe("the `Schema` class", () => {
     expect(
       hasExactly(
         thing,
-        [url, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", predicate1],
         [url, predicate1, data.aString],
         [url, predicate2, data.aBoolean],
         [url, predicate3, data.anUrl],
@@ -154,7 +137,7 @@ describe("the `Schema` class", () => {
         new Date("2020-07-04T13:37:42.000Z"),
       ],
     };
-    const schema = new Schema<typeof data>(predicate1, {
+    const schema = new Schema<typeof data>({
       id: is.key().base64(),
       aString: is.string(predicate1),
       aBoolean: is.boolean(predicate2),

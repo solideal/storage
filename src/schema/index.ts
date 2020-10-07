@@ -1,6 +1,8 @@
 export {
   Schema,
   is,
+  ofType,
+  setType,
   Definition,
   Fields,
   NoKeyDefined,

@@ -1,5 +1,5 @@
 import * as solid from "@inrupt/solid-client";
-import { Repository, NoTypeDefined } from "./repository";
+import { Repository } from "./repository";
 import { Schema, is } from "./schema";
 import { createDataset, hasExactly } from "./ldutils.test";
 import { rdf } from "./namespaces";
@@ -53,7 +53,8 @@ describe("the `Repository` class", () => {
     expect(
       new Repository<Bookmark>({
         source: sampleDataset.internal_resourceInfo.sourceIri,
-        schema: new Schema<Bookmark>(bookmarkTypePredicate, {
+        type: bookmarkTypePredicate,
+        schema: new Schema<Bookmark>({
           id: is.key().base64(),
           title: is.string(titlePredicate),
         }),
@@ -61,17 +62,7 @@ describe("the `Repository` class", () => {
     ).toBeDefined();
   });
 
-  it("can be constructed with a definition but needs a type url in this case", () => {
-    expect(
-      () =>
-        new Repository<Bookmark>({
-          source: sampleDataset.internal_resourceInfo.sourceIri,
-          schema: {
-            id: is.key().base64(),
-            title: is.string(titlePredicate),
-          },
-        })
-    ).toThrow(new NoTypeDefined());
+  it("can be constructed with a definition", () => {
     expect(
       new Repository<Bookmark>({
         source: sampleDataset.internal_resourceInfo.sourceIri,

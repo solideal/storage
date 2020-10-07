@@ -1,4 +1,4 @@
-export { Repository, NoTypeDefined, Options } from "./repository";
+export { Repository, Options } from "./repository";
 export { Schema, is, NoKeyDefined } from "./schema";
 export {
   resolveTypeLocation,

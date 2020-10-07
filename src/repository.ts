@@ -10,8 +10,9 @@ import {
   setThing,
   asUrl,
   ThingLocal,
+  Thing,
 } from "@inrupt/solid-client";
-import { Schema, Definition } from "./schema";
+import { Schema, Definition, setType, ofType } from "./schema";
 import { Maybe } from "./types";
 import {
   fetcher,
@@ -39,10 +40,8 @@ export interface Options<TData> {
   /**
    * Type of data managed by a repository. You must provide an URI representing the
    * resource type (which is the rdf:type value).
-   *
-   * This property is optional if you already provide a `Schema` instance.
    */
-  type?: string;
+  type: string;
 
   /**
    * Schema used to map between linked data and Javascript so you don't have to
@@ -51,18 +50,6 @@ export interface Options<TData> {
    * the schema creation.
    */
   schema: Definition<TData> | Schema<TData>;
-}
-
-/**
- * Specific error when no type has been defined but is mandatory to instantiate a
- * proper `Schema` object.
- */
-export class NoTypeDefined extends Error {
-  constructor() {
-    super(
-      "when giving a schema definition, you must also provide the type of data you wish to persist"
-    );
-  }
 }
 
 /**
@@ -98,10 +85,7 @@ export class Repository<TData> {
     if (this.options.schema instanceof Schema) {
       this.schema = this.options.schema;
     } else {
-      if (!this.options.type) {
-        throw new NoTypeDefined();
-      }
-      this.schema = new Schema(this.options.type, this.options.schema);
+      this.schema = new Schema(this.options.schema);
     }
   }
 
@@ -114,7 +98,10 @@ export class Repository<TData> {
     const dataset = data.reduce((ds, record) => {
       const dataUrl = this.schema.getUrl(record);
       const thing = this.schema.write(
-        dataUrl ? getThing(ds, dataUrl) : createThing(), // Should we check the thing type retrieved with getThing here?
+        setType(
+          dataUrl ? getThing(ds, dataUrl) : createThing(),
+          this.options.type
+        ), // Should we check the thing type retrieved with getThing here?
         record
       );
       this.schema.setUrl(
@@ -176,7 +163,7 @@ export class Repository<TData> {
     if (Array.isArray(filter)) {
       return filter.reduce((result, key) => {
         const thing = getThing(dataset, this.schema.getUrl(key));
-        if (this.schema.ofType(thing)) {
+        if (this.ofType(thing)) {
           result.push(this.schema.read(thing));
         }
         return result;
@@ -184,7 +171,7 @@ export class Repository<TData> {
     }
 
     const results = getThingAll(dataset)
-      .filter(this.schema.ofType.bind(this.schema))
+      .filter(this.ofType.bind(this))
       .map(this.schema.read.bind(this.schema));
 
     return filter ? results.filter(filter) : results;
@@ -210,7 +197,7 @@ export class Repository<TData> {
 
     repo.options.source = resolveOptions?.path
       ? await resolveOrRegisterTypeLocation(
-          repo.schema.type,
+          repo.options.type,
           {
             path: resolveOptions.path,
             index: resolveOptions.index ?? "public",
@@ -219,7 +206,7 @@ export class Repository<TData> {
           resolveOptions.fetch
         )
       : await resolveTypeLocation(
-          repo.schema.type,
+          repo.options.type,
           resolveOptions?.webid,
           resolveOptions?.fetch
         );
@@ -251,5 +238,12 @@ export class Repository<TData> {
       dataset,
       fetcher(this.options.fetch)
     );
+  }
+
+  /**
+   * Checks if the given Thing has a rdf:type corresponding to this schema.
+   */
+  private ofType(thing: Thing): boolean {
+    return ofType(thing, this.options.type);
   }
 }
