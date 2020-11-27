@@ -1,3 +1,5 @@
+import { FetchFunc } from "./types";
+
 /**
  * Global config objects. Global objects are usually a bad thing but let's face it,
  * in a common Solid client application, you will authenticate the user and update
@@ -15,7 +17,7 @@ interface Config {
   /**
    * Global fetch methods to use to make authenticated requests.
    */
-  fetch?: unknown;
+  fetch?: FetchFunc;
 }
 
 // Internal global config object, protected from the outside.

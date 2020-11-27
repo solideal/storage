@@ -249,7 +249,7 @@ describe("the `Repository` class", () => {
       .mockClear();
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    configure({ fetch: () => {} });
+    configure({ fetch: <any>(() => {}) });
 
     const repo = new Repository<Bookmark>({
       source: sampleDataset.internal_resourceInfo.sourceIri,

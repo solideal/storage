@@ -93,7 +93,10 @@ export function createThing(url: string, ...triples: Triple[]): ThingPersisted {
 export function createDataset(
   url: string,
   ...triples: Triple[]
-): SolidDataset & WithResourceInfo {
+): SolidDataset &
+  WithResourceInfo & {
+    internal_resourceInfo: { linkedResources: Record<string, string[]> };
+  } {
   return Object.assign(
     triples.reduce(
       (ds, triple) => ds.add(createQuad(triple[0], triple[1], triple[2])),
@@ -103,6 +106,7 @@ export function createDataset(
       internal_resourceInfo: {
         isRawData: false,
         sourceIri: url,
+        linkedResources: {},
       },
     }
   );

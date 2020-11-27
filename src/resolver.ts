@@ -8,7 +8,7 @@ import {
   createThing,
   setThing,
 } from "@inrupt/solid-client";
-import { Fetcher, Maybe } from "./types";
+import { FetchOptions, FetchFunc, Maybe } from "./types";
 import { setting } from "./config";
 import { solid } from "./namespaces";
 import { Schema, is } from "./schema";
@@ -22,6 +22,15 @@ export class NoWebIdDefined extends Error {
     super(
       "looks like you don't give a webid and the global one has not been set either"
     );
+  }
+}
+
+/**
+ * Error thrown when no profile has been found in a webid document.
+ */
+export class NoProfileFound extends Error {
+  constructor() {
+    super("no profile document was found");
   }
 }
 
@@ -67,7 +76,7 @@ const typeRegistrationSchema = new Schema<{
 export async function resolveTypeLocation(
   type: string,
   webid?: string,
-  fetch?: unknown
+  fetch?: FetchFunc
 ): Promise<string> {
   const options = fetcher(fetch);
   const wid = webid ?? setting("webid");
@@ -77,6 +86,11 @@ export async function resolveTypeLocation(
   }
 
   const profile = getThing(await getSolidDataset(wid, options), wid);
+
+  if (!profile) {
+    throw new NoProfileFound();
+  }
+
   const location = await findFirstAvailableTypeLocation(
     type,
     [
@@ -107,7 +121,7 @@ export async function resolveOrRegisterTypeLocation(
   type: string,
   options: CreateOptions,
   webid?: string,
-  fetch?: unknown
+  fetch?: FetchFunc
 ): Promise<string> {
   try {
     return await resolveTypeLocation(type, webid, fetch);
@@ -120,6 +134,11 @@ export async function resolveOrRegisterTypeLocation(
     const wid = (webid ?? setting("webid"))!; // This one is safe since it will be thrown by the first call
     const fetchOptions = fetcher(fetch);
     const profile = getThing(await getSolidDataset(wid, fetchOptions), wid);
+
+    if (!profile) {
+      throw new NoProfileFound();
+    }
+
     const indexUrl = getUrl(
       profile,
       options.index === "public"
@@ -161,7 +180,7 @@ export async function resolveOrRegisterTypeLocation(
 async function findFirstAvailableTypeLocation(
   type: string,
   urls: (string | null)[],
-  options?: Fetcher
+  options?: FetchOptions
 ): Promise<Maybe<string>> {
   for (const url of urls) {
     if (!url) {
@@ -195,7 +214,7 @@ async function findFirstAvailableTypeLocation(
  * Returns a fetcher options used for getSolidDataset and saveSolidDatasetAt by
  * using the global one if given fetch is undefined.
  */
-export function fetcher(fetch?: unknown): Fetcher | undefined {
+export function fetcher(fetch?: FetchFunc): FetchOptions | undefined {
   const f = fetch ?? setting("fetch");
   return f && { fetch: f };
 }
