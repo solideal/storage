@@ -12,7 +12,7 @@ import {
   ThingLocal,
 } from "@inrupt/solid-client";
 import { Schema, Definition } from "./schema";
-import { Maybe } from "./types";
+import { FetchFunc, Maybe } from "./types";
 import {
   fetcher,
   CreateOptions,
@@ -34,7 +34,7 @@ export interface Options<TData> {
    * If you use the same in every repository, you may provide with the `configure({ fetch: ... })`
    * instead. This one will take precedence over the global one if defined.
    */
-  fetch?: unknown;
+  fetch?: FetchFunc;
 
   /**
    * Type of data managed by a repository. You must provide an URI representing the
@@ -114,7 +114,7 @@ export class Repository<TData> {
     const dataset = data.reduce((ds, record) => {
       const dataUrl = this.schema.getUrl(record);
       const thing = this.schema.write(
-        dataUrl ? getThing(ds, dataUrl) : createThing(), // Should we check the thing type retrieved with getThing here?
+        (dataUrl && getThing(ds, dataUrl)) || createThing(), // Should we check the thing type retrieved with getThing here?
         record
       );
       this.schema.setUrl(
@@ -176,7 +176,7 @@ export class Repository<TData> {
     if (Array.isArray(filter)) {
       return filter.reduce((result, key) => {
         const thing = getThing(dataset, this.schema.getUrl(key));
-        if (this.schema.ofType(thing)) {
+        if (thing && this.schema.ofType(thing)) {
           result.push(this.schema.read(thing));
         }
         return result;
@@ -200,7 +200,7 @@ export class Repository<TData> {
     options: Omit<Options<TData>, "source">,
     resolveOptions?: Partial<CreateOptions> & {
       webid?: string;
-      fetch?: unknown;
+      fetch?: FetchFunc;
     }
   ): Promise<Repository<TData>> {
     const repo = new Repository({

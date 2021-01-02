@@ -5,6 +5,7 @@ import {
   NoWebIdDefined,
   resolveOrRegisterTypeLocation,
   NoIndexLocationFound,
+  NoProfileFound,
 } from "./resolver";
 import { configure } from "./config";
 import { createDataset, hasExactly } from "./ldutils.test";
@@ -29,6 +30,16 @@ describe("the resolveTypeLocation function", () => {
     );
   });
 
+  it("throws an error if no profile exists", async () => {
+    jest
+      .spyOn(solidClient, "getSolidDataset")
+      .mockResolvedValue(createDataset(urls.webid));
+
+    await expect(
+      resolveTypeLocation(urls.type, urls.webid)
+    ).rejects.toThrowError(NoProfileFound);
+  });
+
   it("use the global webid if defined", async () => {
     const spy = jest
       .spyOn(solidClient, "getSolidDataset")
@@ -37,7 +48,7 @@ describe("the resolveTypeLocation function", () => {
     configure({ webid: urls.webid });
 
     await expect(resolveTypeLocation(urls.type)).rejects.toThrowError(
-      new NoLocationFound(urls.type).message
+      new NoProfileFound().message
     );
     expect(spy.mock.calls[0][0]).toEqual(urls.webid);
   });
@@ -50,7 +61,7 @@ describe("the resolveTypeLocation function", () => {
     const fetch = jest.fn();
     await expect(
       resolveTypeLocation(urls.type, urls.webid, fetch)
-    ).rejects.toThrowError(new NoLocationFound(urls.type).message);
+    ).rejects.toThrowError(new NoProfileFound().message);
 
     expect(spy.mock.calls[0][1]).toEqual({ fetch });
   });
@@ -66,9 +77,26 @@ describe("the resolveTypeLocation function", () => {
 
     await expect(
       resolveTypeLocation(urls.type, urls.webid)
-    ).rejects.toThrowError(new NoLocationFound(urls.type).message);
+    ).rejects.toThrowError(new NoProfileFound().message);
 
     expect(spy.mock.calls[0][1]).toEqual({ fetch });
+  });
+
+  it("throws a NoLocationFound is no location could be found", async () => {
+    jest
+      .spyOn(solidClient, "getSolidDataset")
+      .mockResolvedValue(
+        createDataset(urls.webid, [
+          urls.webid,
+          "http://some.predicate",
+          "some value",
+        ])
+      )
+      .mockClear();
+
+    await expect(
+      resolveTypeLocation(urls.type, urls.webid)
+    ).rejects.toThrowError(new NoLocationFound(urls.type).message);
   });
 
   it("returns the first available location from the indexes", async () => {
@@ -101,6 +129,20 @@ describe("the resolveTypeLocation function", () => {
 
 describe("the resolveOrRegisterTypeLocation function", () => {
   beforeEach(() => configure({ webid: undefined, fetch: undefined }));
+
+  it("throws an error if no profile exists", async () => {
+    jest
+      .spyOn(solidClient, "getSolidDataset")
+      .mockResolvedValue(createDataset(urls.webid));
+
+    await expect(
+      resolveOrRegisterTypeLocation(
+        urls.type,
+        { path: urls.newBookmarks, index: "public" },
+        urls.webid
+      )
+    ).rejects.toThrowError(NoProfileFound);
+  });
 
   it("returns the location if already defined for a type", async () => {
     jest
@@ -151,13 +193,19 @@ describe("the resolveOrRegisterTypeLocation function", () => {
         path: urls.newBookmarks,
         index: "public",
       })
-    ).rejects.toThrow(new NoIndexLocationFound().message);
+    ).rejects.toThrow(new NoProfileFound().message);
   });
 
   it("throw an error if no public index exists", async () => {
     jest
       .spyOn(solidClient, "getSolidDataset")
-      .mockResolvedValue(createDataset(urls.webid))
+      .mockResolvedValue(
+        createDataset(urls.webid, [
+          urls.webid,
+          "http://some.predicate",
+          "some value",
+        ])
+      )
       .mockClear();
 
     await expect(
@@ -172,7 +220,13 @@ describe("the resolveOrRegisterTypeLocation function", () => {
   it("throw an error if no private index exists", async () => {
     jest
       .spyOn(solidClient, "getSolidDataset")
-      .mockResolvedValue(createDataset(urls.webid))
+      .mockResolvedValue(
+        createDataset(urls.webid, [
+          urls.webid,
+          "http://some.predicate",
+          "some value",
+        ])
+      )
       .mockClear();
 
     await expect(
