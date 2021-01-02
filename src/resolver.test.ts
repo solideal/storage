@@ -30,6 +30,16 @@ describe("the resolveTypeLocation function", () => {
     );
   });
 
+  it("throws an error if no profile exists", async () => {
+    jest
+      .spyOn(solidClient, "getSolidDataset")
+      .mockResolvedValue(createDataset(urls.webid));
+
+    await expect(
+      resolveTypeLocation(urls.type, urls.webid)
+    ).rejects.toThrowError(NoProfileFound);
+  });
+
   it("use the global webid if defined", async () => {
     const spy = jest
       .spyOn(solidClient, "getSolidDataset")
@@ -119,6 +129,20 @@ describe("the resolveTypeLocation function", () => {
 
 describe("the resolveOrRegisterTypeLocation function", () => {
   beforeEach(() => configure({ webid: undefined, fetch: undefined }));
+
+  it("throws an error if no profile exists", async () => {
+    jest
+      .spyOn(solidClient, "getSolidDataset")
+      .mockResolvedValue(createDataset(urls.webid));
+
+    await expect(
+      resolveOrRegisterTypeLocation(
+        urls.type,
+        { path: urls.newBookmarks, index: "public" },
+        urls.webid
+      )
+    ).rejects.toThrowError(NoProfileFound);
+  });
 
   it("returns the location if already defined for a type", async () => {
     jest
